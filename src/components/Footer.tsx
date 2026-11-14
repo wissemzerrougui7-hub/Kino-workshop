@@ -4,6 +4,8 @@ import {
   HEADER_NAV_LINKS,
   KINO_INSTAGRAM,
   KINO_LOGO_SRC,
+  getBaseUrl,
+  resolveAssetUrl,
 } from '../utils/theme';
 import { HankoStamp } from './HankoStamp';
 import { playSoftClick } from '../utils/soundEffects';
@@ -17,6 +19,7 @@ export const Footer: React.FC<FooterProps> = ({
   logoSrc = KINO_LOGO_SRC,
   onNavigateAdmin,
 }) => {
+  const resolvedLogoSrc = resolveAssetUrl(logoSrc || KINO_LOGO_SRC);
   return (
     <footer className="relative bg-[var(--kino-surface-footer)] text-[#faf9f5] kino-seigaiha-dark">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
@@ -30,11 +33,17 @@ export const Footer: React.FC<FooterProps> = ({
                 className="relative flex items-center justify-center h-[68px] w-28 overflow-hidden rounded-[4px] bg-[#384c31] border border-dashed border-[#a9bf9c]/45 shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#faf9f5]"
               >
                 <img
-                  src={logoSrc}
+                  src={resolvedLogoSrc}
                   alt="شعار ورشات كينو Kino"
                   referrerPolicy="no-referrer"
                   loading="lazy"
                   decoding="async"
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (img.dataset.fallbackFor === resolvedLogoSrc) return;
+                    img.dataset.fallbackFor = resolvedLogoSrc;
+                    img.src = resolveAssetUrl(KINO_LOGO_SRC);
+                  }}
                   className="w-full h-[114px] object-cover object-[50%_47%] select-none pointer-events-none"
                 />
               </a>
@@ -126,7 +135,7 @@ export const Footer: React.FC<FooterProps> = ({
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               <p className="font-arabic">صُنع بحب على طراز الكينوسايغا</p>
               <a
-                href="/admin"
+                href={`${getBaseUrl()}admin`}
                 data-testid="footer-admin-link"
                 onClick={(e) => {
                   if (!onNavigateAdmin) return;

@@ -212,7 +212,7 @@
       "properties": {
         "key": {
           "type": "string",
-          "description": "Fixed slot key such as logo, hero-girl, intro-lighthouse, intro-japan-circle, intro-video-poster, or gallery-seeded.",
+          "description": "Fixed slot key such as logo, hero-girl, intro-lighthouse, intro-japan-circle, intro-video-poster, review-starter-1, review-starter-2, review-starter-3, or gallery-seeded.",
           "minLength": 1,
           "maxLength": 64
         },

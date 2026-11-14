@@ -1,12 +1,17 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { KINO_LOGO_SRC } from '../utils/theme';
+import { KINO_LOGO_SRC, resolveAssetUrl } from '../utils/theme';
 
 interface LoaderProps {
+  logoSrc?: string;
   onComplete?: () => void;
 }
 
-export const Loader: React.FC<LoaderProps> = ({ onComplete }) => {
+export const Loader: React.FC<LoaderProps> = ({
+  logoSrc = KINO_LOGO_SRC,
+  onComplete,
+}) => {
+  const resolvedLogoSrc = resolveAssetUrl(logoSrc || KINO_LOGO_SRC);
   const prefersReducedMotion = useReducedMotion();
   const [visible, setVisible] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -73,10 +78,16 @@ export const Loader: React.FC<LoaderProps> = ({ onComplete }) => {
             {/* Attached Kino Logo seamlessly matched to #384c31 */}
             <div className="w-44 sm:w-52 aspect-[4/5] overflow-hidden flex items-center justify-center">
               <img
-                src={KINO_LOGO_SRC}
+                src={resolvedLogoSrc}
                 alt="شعار ورشات كينو Kino"
                 referrerPolicy="no-referrer"
                 decoding="sync"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (img.dataset.fallbackFor === resolvedLogoSrc) return;
+                  img.dataset.fallbackFor = resolvedLogoSrc;
+                  img.src = resolveAssetUrl(KINO_LOGO_SRC);
+                }}
                 className="w-full h-full object-contain select-none pointer-events-none"
               />
             </div>

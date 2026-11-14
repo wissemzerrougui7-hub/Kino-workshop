@@ -9,13 +9,16 @@ import {
   sanitizeSiteAssetPayload,
 } from './siteAssets.ts';
 
-test('getDefaultSiteAssetsMap provides defaults for all 5 editable site image slots', () => {
+test('getDefaultSiteAssetsMap provides defaults for all 8 editable site image slots (including starter reviews)', () => {
   const defaults = getDefaultSiteAssetsMap();
-  assert.equal(Object.keys(defaults).length, 5);
+  assert.equal(Object.keys(defaults).length, 8);
   for (const slot of SITE_ASSET_SLOTS) {
     assert.equal(defaults[slot.key].isCustom, false);
     assert.ok(defaults[slot.key].src.length > 0);
   }
+  assert.ok(defaults['review-starter-1'].src.includes('/assets/'));
+  assert.ok(defaults['review-starter-2'].src.includes('/assets/'));
+  assert.ok(defaults['review-starter-3'].src.includes('/assets/'));
 });
 
 test('mergeSiteAssets overrides customized image slots and detects gallery-seeded marker', () => {

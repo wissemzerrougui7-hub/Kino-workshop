@@ -16,7 +16,10 @@ export type SiteAssetKey =
   | 'logo'
   | 'intro-lighthouse'
   | 'intro-japan-circle'
-  | 'intro-video-poster';
+  | 'intro-video-poster'
+  | 'review-starter-1'
+  | 'review-starter-2'
+  | 'review-starter-3';
 
 export interface SiteAssetSlotMeta {
   key: SiteAssetKey;
@@ -51,7 +54,7 @@ export const SITE_ASSET_SLOTS: readonly SiteAssetSlotMeta[] = [
   {
     key: 'logo',
     label: 'شعار Kino',
-    sectionHint: 'يظهر في الشريط العلوي، الواجهة الرئيسية، وأسفل الصفحة',
+    sectionHint: 'يظهر في شاشة التحميل، الشريط العلوي، الواجهة الرئيسية، وأسفل الصفحة',
     defaultSrc: KINO_LOGO_SRC,
     defaultAlt: 'شعار ورشات كينو Kino',
   },
@@ -75,6 +78,27 @@ export const SITE_ASSET_SLOTS: readonly SiteAssetSlotMeta[] = [
     sectionHint: 'تظهر قبل الضغط على زر تشغيل الفيديو في قسم التعريف',
     defaultSrc: INTRO_ASSETS.videoPosterSrc,
     defaultAlt: 'لقطة تحضير لوحة كينوسايغا بالقماش والخشب',
+  },
+  {
+    key: 'review-starter-1',
+    label: 'صورة رأي المشاركة ١ (ياسمين ب.)',
+    sectionHint: 'تظهر في بطاقة الرأي الأولى في قسم «وشنو قالو البنات؟»',
+    defaultSrc: '/assets/aistudio/6032864214365443106_38d71dd8.jpg',
+    defaultAlt: 'لوحة من ورشة كينو للمشاركة ياسمين ب.',
+  },
+  {
+    key: 'review-starter-2',
+    label: 'صورة رأي المشاركة ٢ (مريم م.)',
+    sectionHint: 'تظهر في بطاقة الرأي الثانية في قسم «وشنو قالو البنات؟»',
+    defaultSrc: '/assets/aistudio/6032864214365443104_ad22e835.jpg',
+    defaultAlt: 'لوحة من ورشة كينو للمشاركة مريم م.',
+  },
+  {
+    key: 'review-starter-3',
+    label: 'صورة رأي المشاركة ٣ (نور الهدى)',
+    sectionHint: 'تظهر في بطاقة الرأي الثالثة في قسم «وشنو قالو البنات؟»',
+    defaultSrc: '/assets/aistudio/6032864214365443105_33d9c12c.jpg',
+    defaultAlt: 'لوحة من ورشة كينو للمشاركة نور الهدى',
   },
 ] as const;
 

@@ -4,6 +4,7 @@ import {
   HEADER_NAV_LINKS,
   KINO_INSTAGRAM,
   KINO_LOGO_SRC,
+  resolveAssetUrl,
 } from '../utils/theme';
 import {
   isSoundEnabled,
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeSectionId = 'hero',
   logoSrc = KINO_LOGO_SRC,
 }) => {
+  const resolvedLogoSrc = resolveAssetUrl(logoSrc || KINO_LOGO_SRC);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [soundOn, setSoundOn] = useState<boolean>(() => isSoundEnabled());
   const [darkMode, setDarkMode] = useState<boolean>(() => isDarkMode());
@@ -57,9 +59,15 @@ export const Header: React.FC<HeaderProps> = ({
           className="relative flex items-center justify-center h-[52px] w-[72px] sm:h-[68px] sm:w-28 overflow-hidden rounded-[4px] bg-[#384c31] dark:border dark:border-dashed dark:border-[#a9bf9c]/35 shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#faf9f5]"
         >
           <img
-            src={logoSrc}
+            src={resolvedLogoSrc}
             alt="شعار ورشات كينو Kino"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (img.dataset.fallbackFor === resolvedLogoSrc) return;
+              img.dataset.fallbackFor = resolvedLogoSrc;
+              img.src = resolveAssetUrl(KINO_LOGO_SRC);
+            }}
             className="w-full h-[88px] sm:h-[114px] object-cover object-[50%_47%] select-none pointer-events-none"
           />
         </a>

@@ -16,6 +16,7 @@ import {
   getThemeCssVars,
   generatePetalSpecs,
   normalizePublicAssetPath,
+  resolveAssetUrl,
 } from './theme';
 import { parseVideoSource } from './video';
 import {
@@ -364,7 +365,7 @@ test('sanitizeGoogleMapsUrl allows http(s) URLs and rejects unsafe schemes', () 
   assert.equal(sanitizeGoogleMapsUrl(''), '');
 });
 
-test('normalizePublicAssetPath rewrites legacy /src/assets/images/ paths and defaults use /assets/images/', () => {
+test('normalizePublicAssetPath and resolveAssetUrl normalize legacy paths and preserve data/external URLs', () => {
   assert.equal(
     normalizePublicAssetPath('/src/assets/images/kino_girl_arch_1794586132755.jpg'),
     '/assets/images/kino_girl_arch_1794586132755.jpg'
@@ -372,6 +373,18 @@ test('normalizePublicAssetPath rewrites legacy /src/assets/images/ paths and def
   assert.equal(
     normalizePublicAssetPath('data:image/jpeg;base64,abc123'),
     'data:image/jpeg;base64,abc123'
+  );
+  assert.equal(
+    resolveAssetUrl('/src/assets/images/kino_girl_arch_1794586132755.jpg'),
+    '/assets/images/kino_girl_arch_1794586132755.jpg'
+  );
+  assert.equal(
+    resolveAssetUrl('https://example.com/custom.jpg'),
+    'https://example.com/custom.jpg'
+  );
+  assert.equal(
+    resolveAssetUrl('data:image/jpeg;base64,xyz'),
+    'data:image/jpeg;base64,xyz'
   );
   assert.ok(KINO_GIRL_ARCH_SRC.startsWith('/assets/images/'));
   assert.ok(CURRENT_WORKSHOP.imageSrc.startsWith('/assets/images/'));

@@ -22,7 +22,11 @@ import {
   type AdminMemberRecord,
 } from './adminConfig';
 import type { ArtworkChoice } from './registration';
-import { CURRENT_WORKSHOP, type WorkshopConfig } from './theme';
+import {
+  CURRENT_WORKSHOP,
+  normalizePublicAssetPath,
+  type WorkshopConfig,
+} from './theme';
 import { GALLERY_WALL_ITEMS } from './galleryAndReviews';
 import {
   REGISTRATIONS_COLLECTION,
@@ -233,7 +237,7 @@ export function subscribeReviews(
             id: docSnap.id,
             name: String(d.name ?? ''),
             text: String(d.text ?? ''),
-            photo: String(d.photo ?? ''),
+            photo: normalizePublicAssetPath(String(d.photo ?? '')),
             approved: Boolean(d.approved),
             createdAtText: ts.text,
             createdAtMs: ts.ms,
@@ -274,7 +278,7 @@ export function subscribeApprovedReviews(
             id: docSnap.id,
             name: String(d.name ?? ''),
             text: String(d.text ?? ''),
-            photo: String(d.photo ?? ''),
+            photo: normalizePublicAssetPath(String(d.photo ?? '')),
             approved: true,
             createdAtText: ts.text,
             createdAtMs: ts.ms,
@@ -304,7 +308,7 @@ export async function submitPublicReview(input: {
     const docRef = await addDoc(collection(db, REVIEWS_COLLECTION), {
       name: input.name.trim().slice(0, 80),
       text: input.text.trim().slice(0, 1000),
-      photo: input.photo.trim().slice(0, 350000),
+      photo: normalizePublicAssetPath(input.photo).slice(0, 350000),
       approved: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -325,7 +329,7 @@ export async function createReview(input: {
     const docRef = await addDoc(collection(db, REVIEWS_COLLECTION), {
       name: input.name.trim().slice(0, 80),
       text: input.text.trim().slice(0, 1000),
-      photo: input.photo.trim().slice(0, 350000),
+      photo: normalizePublicAssetPath(input.photo).slice(0, 350000),
       approved: Boolean(input.approved),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -344,6 +348,21 @@ export async function setReviewApproved(
   try {
     await updateDoc(doc(db, REVIEWS_COLLECTION, id), {
       approved,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export async function updateReviewPhoto(
+  id: string,
+  photo: string
+): Promise<void> {
+  const path = `${REVIEWS_COLLECTION}/${id}`;
+  try {
+    await updateDoc(doc(db, REVIEWS_COLLECTION, id), {
+      photo: normalizePublicAssetPath(photo).slice(0, 350000),
       updatedAt: serverTimestamp(),
     });
   } catch (error) {

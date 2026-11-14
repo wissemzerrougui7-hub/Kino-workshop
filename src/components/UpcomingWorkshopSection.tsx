@@ -8,7 +8,9 @@ import {
   MapPin,
 } from 'lucide-react';
 import {
+  CURRENT_WORKSHOP,
   formatSeatsLeft,
+  resolveAssetUrl,
   type WorkshopConfig,
   type WorkshopSlot,
 } from '../utils/theme';
@@ -467,11 +469,18 @@ export const UpcomingWorkshopSection: React.FC<
           <div className="relative w-full max-w-[320px] sm:max-w-[380px] rotate-[2.2deg] hover:rotate-0 motion-reduce:hover:rotate-[2.2deg] motion-reduce:transition-none transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] rounded-[6px] border-[10px] border-[#6b4e31] bg-[#faf9f5] dark:bg-[#243220] p-2.5 shadow-[0_20px_42px_rgba(45,63,39,0.22)]">
             <div className="overflow-hidden rounded-[2px] border border-dashed border-[#55734a]/45 dark:border-[#a9bf9c]/40 bg-[#eef2ea] dark:bg-[#1a2417] aspect-[3/4]">
               <img
-                src={workshop.imageSrc}
+                src={resolveAssetUrl(workshop.imageSrc || CURRENT_WORKSHOP.imageSrc)}
                 alt={workshop.imageAlt}
                 referrerPolicy="no-referrer"
                 loading="lazy"
                 decoding="async"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  const target = resolveAssetUrl(workshop.imageSrc);
+                  if (img.dataset.fallbackFor === target) return;
+                  img.dataset.fallbackFor = target;
+                  img.src = resolveAssetUrl(CURRENT_WORKSHOP.imageSrc);
+                }}
                 className="w-full h-full object-cover block"
               />
             </div>

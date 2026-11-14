@@ -17,8 +17,15 @@ import {
   subscribeApprovedReviews,
 } from '../utils/firestoreService';
 import { playSurpriseChime } from '../utils/soundEffects';
+import { resolveAssetUrl } from '../utils/theme';
 
-export const ReviewsWallSection: React.FC = () => {
+interface ReviewsWallSectionProps {
+  starterReviewPhotos?: Partial<Record<string, string>>;
+}
+
+export const ReviewsWallSection: React.FC<ReviewsWallSectionProps> = ({
+  starterReviewPhotos,
+}) => {
   const [approvedReviews, setApprovedReviews] = useState<ReviewRecord[]>([]);
   const [brokenPhotos, setBrokenPhotos] = useState<Record<string, boolean>>({});
   const [lightboxPhoto, setLightboxPhoto] = useState<{
@@ -129,7 +136,12 @@ export const ReviewsWallSection: React.FC = () => {
   };
 
   const displayedReviews =
-    approvedReviews.length > 0 ? approvedReviews : STARTER_APPROVED_REVIEWS;
+    approvedReviews.length > 0
+      ? approvedReviews
+      : STARTER_APPROVED_REVIEWS.map((review) => ({
+          ...review,
+          photo: starterReviewPhotos?.[review.id] || review.photo,
+        }));
 
   return (
     <section
@@ -178,7 +190,11 @@ export const ReviewsWallSection: React.FC = () => {
         >
           {displayedReviews.map((review, index) => {
             const visual = getReviewNoteVisuals(index);
-            const hasBrokenPhoto = Boolean(brokenPhotos[review.id]);
+            const resolvedPhoto = review.photo
+              ? resolveAssetUrl(review.photo)
+              : '';
+            const photoBrokenKey = `${review.id}:${resolvedPhoto}`;
+            const hasBrokenPhoto = Boolean(brokenPhotos[photoBrokenKey]);
 
             return (
               <motion.article
@@ -215,17 +231,17 @@ export const ReviewsWallSection: React.FC = () => {
                 </div>
 
                 {/* Optional Participant Work Photo */}
-                {review.photo && !hasBrokenPhoto && (
+                {resolvedPhoto && !hasBrokenPhoto && (
                   <button
                     type="button"
                     onClick={() =>
-                      setLightboxPhoto({ src: review.photo, name: review.name })
+                      setLightboxPhoto({ src: resolvedPhoto, name: review.name })
                     }
                     aria-label={`معاينة صورة عمل ${review.name}`}
                     className="block w-full overflow-hidden rounded-[2px] border border-[#d6cebc] dark:border-[#4b5f42] bg-[#eef2ea] dark:bg-[#182215] aspect-[4/3] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d3f27] dark:focus-visible:outline-[#a9bf9c]"
                   >
                     <img
-                      src={review.photo}
+                      src={resolvedPhoto}
                       alt={`لوحة من ورشة كينو للمشاركة ${review.name}`}
                       referrerPolicy="no-referrer"
                       loading="lazy"
@@ -233,7 +249,7 @@ export const ReviewsWallSection: React.FC = () => {
                       onError={() =>
                         setBrokenPhotos((prev) => ({
                           ...prev,
-                          [review.id]: true,
+                          [photoBrokenKey]: true,
                         }))
                       }
                       className="w-full h-full object-cover block"

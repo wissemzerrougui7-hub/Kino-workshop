@@ -13,6 +13,7 @@ import {
   HERO_HILL_LAYERS,
   KINO_GIRL_ARCH_SRC,
   KINO_LOGO_SRC,
+  resolveAssetUrl,
   type HeroHillLayer,
   type WorkshopThemeId,
 } from '../utils/theme';
@@ -235,6 +236,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   heroGirlSrc = KINO_GIRL_ARCH_SRC,
   heroGirlAlt = 'لوحة فتاة الكينوسايجا مع أزهار الوستيريا والمروحة',
 }) => {
+  const resolvedLogoSrc = resolveAssetUrl(logoSrc || KINO_LOGO_SRC);
+  const resolvedHeroGirlSrc = resolveAssetUrl(heroGirlSrc || KINO_GIRL_ARCH_SRC);
   const heroRef = useRef<HTMLElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
@@ -288,10 +291,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           {/* Large Attached Kino Logo (tightly framed without empty padding) */}
           <div className="relative flex items-center justify-center h-24 w-40 sm:h-28 sm:w-48 overflow-hidden rounded-[6px] bg-[#384c31] border border-dashed border-[#a9bf9c]/45 shadow-[0_8px_22px_rgba(20,29,17,0.35)]">
             <img
-              src={logoSrc}
+              src={resolvedLogoSrc}
               alt="شعار كينو الكبير Kino"
               referrerPolicy="no-referrer"
               decoding="async"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (img.dataset.fallbackFor === resolvedLogoSrc) return;
+                img.dataset.fallbackFor = resolvedLogoSrc;
+                img.src = resolveAssetUrl(KINO_LOGO_SRC);
+              }}
               className="w-full h-[180px] sm:h-[210px] object-cover object-[50%_47%] select-none pointer-events-none"
             />
           </div>
@@ -342,15 +351,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="relative w-full max-w-[290px] sm:max-w-[330px] rounded-t-full rounded-b-[6px] bg-[#faf9f5] border-[6px] border-[#6b4e31] p-2.5 pb-12 sm:pb-14 shadow-[0_18px_40px_rgba(18,27,15,0.45)]">
             <div className="relative rounded-t-full rounded-b-[3px] border border-dashed border-[#55734a]/55 bg-[#faf9f5] pt-4 px-2.5 pb-3 overflow-hidden">
               <img
-                src={heroGirlSrc}
+                src={resolvedHeroGirlSrc}
                 alt={heroGirlAlt}
                 referrerPolicy="no-referrer"
                 decoding="async"
                 onError={(e) => {
                   const img = e.currentTarget;
-                  if (img.dataset.fallbackApplied === 'true') return;
-                  img.dataset.fallbackApplied = 'true';
-                  img.src = KINO_GIRL_ARCH_SRC;
+                  if (img.dataset.fallbackFor === resolvedHeroGirlSrc) return;
+                  img.dataset.fallbackFor = resolvedHeroGirlSrc;
+                  img.src = resolveAssetUrl(KINO_GIRL_ARCH_SRC);
                 }}
                 className="w-full h-auto block object-contain mix-blend-multiply select-none"
               />

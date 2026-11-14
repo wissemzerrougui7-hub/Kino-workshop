@@ -211,6 +211,33 @@ export function normalizePublicAssetPath(src: string): string {
   return trimmed;
 }
 
+export function getBaseUrl(): string {
+  const rawBase =
+    (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
+  if (!rawBase) return '/';
+  return rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+}
+
+export function resolveAssetUrl(src: string): string {
+  const normalized = normalizePublicAssetPath(src);
+  if (!normalized) return '';
+  if (
+    normalized.startsWith('data:') ||
+    normalized.startsWith('blob:') ||
+    /^https?:\/\//i.test(normalized)
+  ) {
+    return normalized;
+  }
+  const base = getBaseUrl();
+  if (normalized.startsWith('/')) {
+    if (base !== '/' && normalized.startsWith(base)) {
+      return normalized;
+    }
+    return `${base}${normalized.slice(1)}`;
+  }
+  return normalized;
+}
+
 export const HERO_CONTENT = {
   jpKicker: 'キノサイガ',
   h1: 'ورشات الكينوسايجا',

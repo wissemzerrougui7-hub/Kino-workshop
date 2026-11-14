@@ -15,6 +15,7 @@ import { AdminPage } from './components/AdminPage';
 import {
   CURRENT_WORKSHOP,
   INTRO_CONTENT,
+  getBaseUrl,
   getThemeCssVars,
   type WorkshopConfig,
   type WorkshopThemeId,
@@ -31,7 +32,12 @@ import {
 import { applyColorModeToDocument, getColorMode } from './utils/colorMode';
 
 function isAdminPath(pathname: string): boolean {
-  return pathname === '/admin' || pathname === '/admin/';
+  const normalized = pathname.replace(/\/+$/, '');
+  const base = getBaseUrl().replace(/\/+$/, '');
+  return (
+    normalized === '/admin' ||
+    (base !== '' && normalized === `${base}/admin`)
+  );
 }
 
 export default function App() {
@@ -120,8 +126,9 @@ export default function App() {
       <MotionConfig reducedMotion="user">
         <AdminPage
           onNavigateHome={() => {
-            window.history.pushState({}, '', '/');
-            setPathname('/');
+            const homeUrl = getBaseUrl();
+            window.history.pushState({}, '', homeUrl);
+            setPathname(homeUrl);
           }}
         />
       </MotionConfig>
@@ -132,7 +139,7 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <Loader />
+      <Loader logoSrc={siteAssets.logo.src} />
       <div
         data-theme={activeTheme}
         style={themeVars as React.CSSProperties}
@@ -214,7 +221,13 @@ export default function App() {
               stitchColor="#55734a"
               useAccentStitch
             />
-            <ReviewsWallSection />
+            <ReviewsWallSection
+              starterReviewPhotos={{
+                'starter-review-1': siteAssets['review-starter-1'].src,
+                'starter-review-2': siteAssets['review-starter-2'].src,
+                'starter-review-3': siteAssets['review-starter-3'].src,
+              }}
+            />
 
             {/* Wavy stitched transition into Registration Section */}
             <WavyStitchedDivider
@@ -249,8 +262,9 @@ export default function App() {
           <Footer
             logoSrc={siteAssets.logo.src}
             onNavigateAdmin={() => {
-              window.history.pushState({}, '', '/admin');
-              setPathname('/admin');
+              const adminUrl = `${getBaseUrl()}admin`;
+              window.history.pushState({}, '', adminUrl);
+              setPathname(adminUrl);
               window.scrollTo({ top: 0, behavior: 'instant' });
             }}
           />

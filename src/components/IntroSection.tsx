@@ -5,6 +5,7 @@ import {
   INTRO_ASSETS,
   INTRO_CONTENT,
   INTRO_VIDEO_URL,
+  resolveAssetUrl,
 } from '../utils/theme';
 import { parseVideoSource } from '../utils/video';
 import { playWoodTap } from '../utils/soundEffects';
@@ -30,6 +31,15 @@ export const IntroSection: React.FC<IntroSectionProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const videoSource = useMemo(() => parseVideoSource(INTRO_VIDEO_URL), []);
+  const resolvedLighthouseSrc = resolveAssetUrl(
+    lighthouseSrc || INTRO_ASSETS.lighthouseSrc
+  );
+  const resolvedJapanCircleSrc = resolveAssetUrl(
+    japanCircleSrc || INTRO_ASSETS.japanCircleSrc
+  );
+  const resolvedVideoPosterSrc = resolveAssetUrl(
+    videoPosterSrc || INTRO_ASSETS.videoPosterSrc
+  );
 
   return (
     <section
@@ -147,11 +157,17 @@ export const IntroSection: React.FC<IntroSectionProps> = ({
               <div className="kino-gentle-sway relative z-10 rounded-[6px] border-[10px] border-[#6b4e31] bg-[#faf9f5] dark:bg-[#243220] p-2 shadow-[0_20px_42px_rgba(45,63,39,0.22)]">
                 <div className="overflow-hidden rounded-[2px] border border-dashed border-[#55734a]/40 dark:border-[#a9bf9c]/40 bg-[#eef2ea] dark:bg-[#1a2417] aspect-[3/4]">
                   <img
-                    src={lighthouseSrc}
+                    src={resolvedLighthouseSrc}
                     alt={lighthouseAlt}
                     referrerPolicy="no-referrer"
                     loading="lazy"
                     decoding="async"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      if (img.dataset.fallbackFor === resolvedLighthouseSrc) return;
+                      img.dataset.fallbackFor = resolvedLighthouseSrc;
+                      img.src = resolveAssetUrl(INTRO_ASSETS.lighthouseSrc);
+                    }}
                     className="w-full h-full object-cover block"
                   />
                 </div>
@@ -161,11 +177,17 @@ export const IntroSection: React.FC<IntroSectionProps> = ({
               <div className="absolute -bottom-5 -left-1 sm:-bottom-6 sm:-left-8 z-20 w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-[#faf9f5] dark:bg-[#243220] p-1.5 border-[3px] border-[#6b4e31] shadow-[0_12px_28px_rgba(30,44,25,0.3)]">
                 <div className="w-full h-full rounded-full overflow-hidden border-2 border-dashed border-[#55734a]/70 dark:border-[#a9bf9c]/55 bg-[#eef2ea] dark:bg-[#1a2417]">
                   <img
-                    src={japanCircleSrc}
+                    src={resolvedJapanCircleSrc}
                     alt={japanCircleAlt}
                     referrerPolicy="no-referrer"
                     loading="lazy"
                     decoding="async"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      if (img.dataset.fallbackFor === resolvedJapanCircleSrc) return;
+                      img.dataset.fallbackFor = resolvedJapanCircleSrc;
+                      img.src = resolveAssetUrl(INTRO_ASSETS.japanCircleSrc);
+                    }}
                     className="w-full h-full object-cover block"
                   />
                 </div>
@@ -186,11 +208,17 @@ export const IntroSection: React.FC<IntroSectionProps> = ({
             {!isPlaying ? (
               <div className="relative w-full h-full">
                 <img
-                  src={videoPosterSrc}
+                  src={resolvedVideoPosterSrc}
                   alt={videoPosterAlt}
                   referrerPolicy="no-referrer"
                   loading="lazy"
                   decoding="async"
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (img.dataset.fallbackFor === resolvedVideoPosterSrc) return;
+                    img.dataset.fallbackFor = resolvedVideoPosterSrc;
+                    img.src = resolveAssetUrl(INTRO_ASSETS.videoPosterSrc);
+                  }}
                   className="w-full h-full object-cover block"
                 />
                 {/* Scrim + inner stitched border */}
@@ -235,8 +263,8 @@ export const IntroSection: React.FC<IntroSectionProps> = ({
                   />
                 ) : (
                   <video
-                    src={videoSource.src}
-                    poster={videoPosterSrc}
+                    src={resolveAssetUrl(videoSource.src)}
+                    poster={resolvedVideoPosterSrc}
                     controls
                     autoPlay
                     playsInline

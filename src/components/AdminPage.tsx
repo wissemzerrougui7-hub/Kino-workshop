@@ -20,6 +20,7 @@ import {
   Upload,
   UserPlus,
   Users,
+  X,
 } from 'lucide-react';
 import { auth, googleProvider } from '../firebase';
 import {
@@ -53,6 +54,7 @@ import {
   subscribeReviews,
   subscribeSiteAssets,
   subscribeWorkshopConfig,
+  updateReviewPhoto,
 } from '../utils/firestoreService';
 import {
   SITE_ASSET_SLOTS,
@@ -65,7 +67,9 @@ import {
   CURRENT_WORKSHOP,
   KINO_LOGO_SRC,
   WORKSHOP_THEMES,
+  getBaseUrl,
   getThemeCssVars,
+  resolveAssetUrl,
   type WorkshopConfig,
   type WorkshopThemeId,
 } from '../utils/theme';
@@ -106,6 +110,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
   const [newReviewPhoto, setNewReviewPhoto] = useState('');
   const [newReviewApproved, setNewReviewApproved] = useState(true);
   const [reviewFormError, setReviewFormError] = useState<string | null>(null);
+  const [reviewStatus, setReviewStatus] = useState<string | null>(null);
+  const [updatingReviewPhotoId, setUpdatingReviewPhotoId] = useState<string | null>(null);
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
 
   const [checkingDynamicAdmin, setCheckingDynamicAdmin] = useState(false);
@@ -288,6 +294,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
   const handleAddReview = async (event: React.FormEvent) => {
     event.preventDefault();
     setReviewFormError(null);
+    setReviewStatus(null);
     if (newReviewName.trim().length < 2 || newReviewText.trim().length < 2) {
       setReviewFormError('اكتبي اسم المشاركة ونص التقييم من فضلك.');
       return;
@@ -303,10 +310,71 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
       setNewReviewText('');
       setNewReviewPhoto('');
       setNewReviewApproved(true);
+      setReviewStatus('تمت إضافة التقييم بنجاح.');
     } catch (err) {
       setReviewFormError(
         err instanceof Error ? err.message : 'تعذّر إضافة التقييم.'
       );
+    }
+  };
+
+  const handleNewReviewPhotoUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setReviewFormError(null);
+    if (!file.type.startsWith('image/')) {
+      setReviewFormError('من فضلك اختاري ملف صورة صحيح.');
+      return;
+    }
+    try {
+      const compressed = await compressImageFileToDataUrl(file);
+      setNewReviewPhoto(compressed);
+    } catch (err) {
+      setReviewFormError(
+        err instanceof Error ? err.message : 'تعذّر رفع صورة التقييم.'
+      );
+    }
+  };
+
+  const handleChangeExistingReviewPhoto = async (
+    reviewId: string,
+    file: File
+  ) => {
+    setReviewFormError(null);
+    setReviewStatus(null);
+    if (!file.type.startsWith('image/')) {
+      setReviewFormError('من فضلك اختاري ملف صورة صحيح.');
+      return;
+    }
+    setUpdatingReviewPhotoId(reviewId);
+    try {
+      const compressed = await compressImageFileToDataUrl(file);
+      await updateReviewPhoto(reviewId, compressed);
+      setReviewStatus('تم تحديث صورة التقييم بنجاح.');
+    } catch (err) {
+      setReviewFormError(
+        err instanceof Error ? err.message : 'تعذّر تحديث صورة التقييم.'
+      );
+    } finally {
+      setUpdatingReviewPhotoId(null);
+    }
+  };
+
+  const handleClearExistingReviewPhoto = async (reviewId: string) => {
+    setReviewFormError(null);
+    setReviewStatus(null);
+    setUpdatingReviewPhotoId(reviewId);
+    try {
+      await updateReviewPhoto(reviewId, '');
+      setReviewStatus('تمت إزالة الصورة من التقييم.');
+    } catch (err) {
+      setReviewFormError(
+        err instanceof Error ? err.message : 'تعذّر إزالة صورة التقييم.'
+      );
+    } finally {
+      setUpdatingReviewPhotoId(null);
     }
   };
 
@@ -373,9 +441,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="h-[44px] sm:h-[52px] w-14 sm:w-20 overflow-hidden rounded-[4px] bg-[#384c31] border border-dashed border-[#a9bf9c]/45 shrink-0 flex items-center justify-center">
               <img
-                src={siteAssets.logo.src || KINO_LOGO_SRC}
+                src={resolveAssetUrl(siteAssets.logo.src || KINO_LOGO_SRC)}
                 alt="شعار Kino"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  const target = resolveAssetUrl(siteAssets.logo.src || KINO_LOGO_SRC);
+                  if (img.dataset.fallbackFor === target) return;
+                  img.dataset.fallbackFor = target;
+                  img.src = resolveAssetUrl(KINO_LOGO_SRC);
+                }}
                 className="w-full h-[76px] sm:h-[90px] object-cover object-[50%_47%]"
               />
             </div>
@@ -391,7 +466,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <a
-              href="/"
+              href={getBaseUrl()}
               onClick={(e) => {
                 e.preventDefault();
                 onNavigateHome();
@@ -665,13 +740,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        setPreviewModalUrl(reg.uploadedImageUrl)
+                                        setPreviewModalUrl(
+                                          resolveAssetUrl(reg.uploadedImageUrl)
+                                        )
                                       }
                                       className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] shrink-0 rounded-[3px] overflow-hidden border border-[#55734a]/40 cursor-pointer"
                                       aria-label={`معاينة صورة ${reg.firstName}`}
                                     >
                                       <img
-                                        src={reg.uploadedImageUrl}
+                                        src={resolveAssetUrl(reg.uploadedImageUrl)}
                                         alt={`صورة لوحة ${reg.firstName}`}
                                         loading="lazy"
                                         decoding="async"
@@ -733,15 +810,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
                     </p>
                   )}
 
-                  {/* Section A: Main Landing Page Image Slots */}
+                  {/* Section A: All Editable Website Image Slots */}
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <h2 className="text-xl font-bold text-[#2d3f27]">
-                        صور الواجهة والأقسام الرئيسية
+                        جميع صور الموقع (الواجهة، الأقسام، والآراء)
                       </h2>
                       <p className="text-sm text-[#55734a]">
                         ارفعي صورة جديدة من جهازك أو اكتبي رابطاً ثم اضغطي حفظ؛
-                        ستتغيّر مباشرةً على الصفحة الرئيسية للزوار.
+                        ستتغيّر مباشرةً في جميع أنحاء الموقع للزوار.
                       </p>
                     </div>
 
@@ -751,7 +828,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
                           key={slotMeta.key}
                           meta={slotMeta}
                           record={siteAssets[slotMeta.key]}
-                          onZoom={setPreviewModalUrl}
+                          onZoom={(url) => setPreviewModalUrl(resolveAssetUrl(url))}
                           onSave={async (nextSrc, nextAlt) => {
                             setMediaError(null);
                             setMediaStatus(null);
@@ -776,19 +853,36 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
                       ))}
 
                       {/* Quick sync card for the active workshop artwork */}
-                      <div className="rounded-[6px] border border-[#d6cebc] bg-[#fffdf9] p-4 flex flex-col justify-between gap-3">
+                      <div
+                        data-testid="site-asset-card-workshop-image"
+                        className="rounded-[6px] border border-[#d6cebc] bg-[#fffdf9] p-4 flex flex-col justify-between gap-3"
+                      >
                         <div className="flex items-start gap-3.5">
                           <button
                             type="button"
                             onClick={() =>
-                              setPreviewModalUrl(workshopDraft.imageSrc)
+                              setPreviewModalUrl(
+                                resolveAssetUrl(workshopDraft.imageSrc)
+                              )
                             }
                             aria-label="معاينة صورة الورشة الجاية"
                             className="w-20 h-20 shrink-0 rounded-[4px] overflow-hidden border border-[#6b4e31]/50 bg-[#eef2ea] cursor-pointer"
                           >
                             <img
-                              src={workshopDraft.imageSrc}
+                              src={resolveAssetUrl(workshopDraft.imageSrc)}
                               alt={workshopDraft.imageAlt}
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                const img = e.currentTarget;
+                                const target = resolveAssetUrl(
+                                  workshopDraft.imageSrc
+                                );
+                                if (img.dataset.fallbackFor === target) return;
+                                img.dataset.fallbackFor = target;
+                                img.src = resolveAssetUrl(
+                                  CURRENT_WORKSHOP.imageSrc
+                                );
+                              }}
                               className="w-full h-full object-cover block"
                             />
                           </button>
@@ -807,52 +901,117 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-dashed border-[#55734a]/20">
-                          <label className="inline-flex items-center gap-1.5 min-h-[44px] px-3.5 py-2 rounded-[4px] bg-[#2d3f27] text-[#faf9f5] text-xs sm:text-sm font-bold cursor-pointer hover:bg-[#3a4f32]">
-                            <Upload className="w-4 h-4 shrink-0" aria-hidden="true" />
-                            <span>تغيير صورة الورشة</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="sr-only"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                if (!file.type.startsWith('image/')) {
-                                  setMediaError('من فضلك اختاري ملف صورة صحيح.');
+                        <div className="space-y-2 pt-2 border-t border-dashed border-[#55734a]/20">
+                          <input
+                            type="text"
+                            dir="ltr"
+                            aria-label="رابط صورة لوحة الورشة الجاية"
+                            value={workshopDraft.imageSrc}
+                            onChange={(e) =>
+                              setWorkshopDraft((prev) => ({
+                                ...prev,
+                                imageSrc: e.target.value,
+                              }))
+                            }
+                            placeholder="رابط الصورة أو المسار..."
+                            className="w-full min-h-[44px] px-3 py-1.5 rounded-[4px] border border-[#55734a]/35 bg-[#faf9f5] text-left text-xs sm:text-sm"
+                          />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="inline-flex items-center gap-1.5 min-h-[44px] px-3.5 py-2 rounded-[4px] bg-[#2d3f27] text-[#faf9f5] text-xs sm:text-sm font-bold cursor-pointer hover:bg-[#3a4f32]">
+                              <Upload className="w-4 h-4 shrink-0" aria-hidden="true" />
+                              <span>تغيير من الجهاز</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="sr-only"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  if (!file.type.startsWith('image/')) {
+                                    setMediaError('من فضلك اختاري ملف صورة صحيح.');
+                                    return;
+                                  }
+                                  try {
+                                    setMediaError(null);
+                                    setMediaStatus(null);
+                                    const compressed =
+                                      await compressImageFileToDataUrl(file);
+                                    const nextDraft = {
+                                      ...workshopDraft,
+                                      imageSrc: compressed,
+                                    };
+                                    setWorkshopDraft(nextDraft);
+                                    await saveWorkshopConfig(nextDraft);
+                                    setMediaStatus(
+                                      'تم تغيير صورة الورشة الجاية وحفظها بنجاح.'
+                                    );
+                                  } catch (err) {
+                                    setMediaError(
+                                      err instanceof Error
+                                        ? err.message
+                                        : 'تعذّر حفظ صورة الورشة.'
+                                    );
+                                  }
+                                }}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!workshopDraft.imageSrc.trim()) {
+                                  setMediaError('رابط الصورة لا يمكن أن يكون فارغاً.');
                                   return;
                                 }
                                 try {
                                   setMediaError(null);
                                   setMediaStatus(null);
-                                  const compressed =
-                                    await compressImageFileToDataUrl(file);
-                                  const nextDraft = {
-                                    ...workshopDraft,
-                                    imageSrc: compressed,
-                                  };
-                                  setWorkshopDraft(nextDraft);
-                                  await saveWorkshopConfig(nextDraft);
-                                  setMediaStatus(
-                                    'تم تغيير صورة الورشة الجاية وحفظها بنجاح.'
-                                  );
+                                  await saveWorkshopConfig(workshopDraft);
+                                  setMediaStatus('تم حفظ رابط صورة الورشة الجاية بنجاح.');
                                 } catch (err) {
                                   setMediaError(
                                     err instanceof Error
                                       ? err.message
-                                      : 'تعذّر حفظ صورة الورشة.'
+                                      : 'تعذّر حفظ رابط صورة الورشة.'
                                   );
                                 }
                               }}
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab('workshop')}
-                            className="inline-flex items-center min-h-[44px] px-3 py-2 rounded-[4px] border border-[#55734a]/40 text-xs sm:text-sm font-semibold text-[#2d3f27] hover:border-[#2d3f27] cursor-pointer"
-                          >
-                            باقي تفاصيل الورشة
-                          </button>
+                              className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-[4px] border border-[#55734a]/45 bg-[#eef2ea] text-xs sm:text-sm font-bold text-[#2d3f27] hover:border-[#2d3f27] cursor-pointer"
+                            >
+                              <Save className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                              <span>حفظ الرابط</span>
+                            </button>
+                            {workshopDraft.imageSrc !== CURRENT_WORKSHOP.imageSrc && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    setMediaError(null);
+                                    setMediaStatus(null);
+                                    const nextDraft = {
+                                      ...workshopDraft,
+                                      imageSrc: CURRENT_WORKSHOP.imageSrc,
+                                      imageAlt: CURRENT_WORKSHOP.imageAlt,
+                                    };
+                                    setWorkshopDraft(nextDraft);
+                                    await saveWorkshopConfig(nextDraft);
+                                    setMediaStatus(
+                                      'تم استرجاع الصورة الأصلية للورشة الجاية.'
+                                    );
+                                  } catch (err) {
+                                    setMediaError(
+                                      err instanceof Error
+                                        ? err.message
+                                        : 'تعذّر استرجاع صورة الورشة.'
+                                    );
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-[4px] border border-[#b8322a]/35 text-xs sm:text-sm font-semibold text-[#b8322a] hover:bg-[#b8322a]/10 cursor-pointer"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                                <span>استرجاع الأصلية</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1220,9 +1379,23 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
                 </form>
               )}
 
-              {/* TAB 3: REVIEWS MODERATION */}
+              {/* TAB 4: REVIEWS MODERATION */}
               {activeTab === 'reviews' && (
-                <div className="space-y-6">
+                <div className="space-y-6" data-testid="admin-reviews-panel">
+                  <div className="rounded-[6px] border border-dashed border-[#55734a]/40 bg-[#eef2ea]/75 p-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs sm:text-sm text-[#2d3f27]">
+                      لتغيير صور آراء المشاركات الافتراضية الثلاثة، انتقلي إلى تبويب{' '}
+                      <strong>«صور الموقع»</strong>، أو أضيفي/عدّلي أي صورة مباشرةً من التقييمات أدناه.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('media')}
+                      className="inline-flex items-center min-h-[44px] px-3.5 py-2 rounded-[4px] border border-[#55734a]/45 bg-[#fffdf9] text-xs sm:text-sm font-bold text-[#2d3f27] hover:border-[#2d3f27] cursor-pointer shrink-0"
+                    >
+                      فتح صور الموقع
+                    </button>
+                  </div>
+
                   {/* Quick Add Review Form */}
                   <form
                     onSubmit={handleAddReview}
@@ -1239,15 +1412,49 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
                         onChange={(e) => setNewReviewName(e.target.value)}
                         className="min-h-[44px] px-3 py-2 rounded-[4px] border border-[#55734a]/35 bg-[#faf9f5]"
                       />
-                      <input
-                        type="text"
-                        dir="ltr"
-                        placeholder="رابط الصورة (اختياري)"
-                        value={newReviewPhoto}
-                        onChange={(e) => setNewReviewPhoto(e.target.value)}
-                        className="min-h-[44px] px-3 py-2 rounded-[4px] border border-[#55734a]/35 bg-[#faf9f5] text-left"
-                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          dir="ltr"
+                          placeholder="رابط الصورة (اختياري)"
+                          value={newReviewPhoto}
+                          onChange={(e) => setNewReviewPhoto(e.target.value)}
+                          className="flex-1 min-w-0 min-h-[44px] px-3 py-2 rounded-[4px] border border-[#55734a]/35 bg-[#faf9f5] text-left"
+                        />
+                        <label className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-[4px] bg-[#eef2ea] border border-[#55734a]/40 text-xs sm:text-sm font-bold text-[#2d3f27] hover:border-[#2d3f27] cursor-pointer shrink-0">
+                          <Upload className="w-4 h-4 shrink-0" aria-hidden="true" />
+                          <span>رفع صورة</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleNewReviewPhotoUpload}
+                            className="sr-only"
+                          />
+                        </label>
+                        {newReviewPhoto && (
+                          <button
+                            type="button"
+                            onClick={() => setNewReviewPhoto('')}
+                            aria-label="إزالة صورة التقييم الجديد"
+                            className="inline-flex items-center justify-center w-11 h-11 rounded-[4px] border border-[#b8322a]/35 text-[#b8322a] hover:bg-[#b8322a]/10 cursor-pointer shrink-0"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
+                    {newReviewPhoto.trim() && (
+                      <div className="flex items-center gap-3 p-2 rounded-[4px] bg-[#eef2ea]/75 border border-[#55734a]/25">
+                        <img
+                          src={resolveAssetUrl(newReviewPhoto)}
+                          alt="معاينة صورة التقييم الجديد"
+                          className="w-12 h-12 rounded-[3px] object-cover border border-[#6b4e31]/40 shrink-0"
+                        />
+                        <span className="text-xs text-[#3a4f32]">
+                          معاينة الصورة المرفقة مع التقييم الجديد
+                        </span>
+                      </div>
+                    )}
                     <textarea
                       rows={2}
                       placeholder="رأي المشاركة في الورشة..."
@@ -1277,6 +1484,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
                         {reviewFormError}
                       </p>
                     )}
+                    {reviewStatus && (
+                      <p
+                        role="status"
+                        className="text-sm font-semibold text-[#2d3f27] bg-[#eef2ea] border border-[#55734a]/40 rounded-[4px] px-3 py-2"
+                      >
+                        {reviewStatus}
+                      </p>
+                    )}
                   </form>
 
                   {/* Reviews List */}
@@ -1286,80 +1501,136 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigateHome }) => {
                         لا توجد تقييمات في قاعدة البيانات حالياً.
                       </p>
                     ) : (
-                      reviews.map((review) => (
-                        <div
-                          key={review.id}
-                          className="rounded-[4px] border border-[#d6cebc] bg-[#fffdf9] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                        >
-                          <div className="flex items-start gap-3.5 min-w-0">
-                            {review.photo && (
+                      reviews.map((review) => {
+                        const isUpdatingPhoto =
+                          updatingReviewPhotoId === review.id;
+                        const resolvedReviewPhoto = review.photo
+                          ? resolveAssetUrl(review.photo)
+                          : '';
+                        return (
+                          <div
+                            key={review.id}
+                            className="rounded-[4px] border border-[#d6cebc] bg-[#fffdf9] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                          >
+                            <div className="flex items-start gap-3.5 min-w-0">
+                              {resolvedReviewPhoto && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setPreviewModalUrl(resolvedReviewPhoto)
+                                  }
+                                  aria-label={`معاينة صورة ${review.name}`}
+                                  className="shrink-0 cursor-pointer rounded-[4px] overflow-hidden border border-[#55734a]/30 hover:border-[#2d3f27]"
+                                >
+                                  <img
+                                    src={resolvedReviewPhoto}
+                                    alt={`صورة ${review.name}`}
+                                    referrerPolicy="no-referrer"
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-16 h-16 object-cover block"
+                                  />
+                                </button>
+                              )}
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 text-sm">
+                                  <strong className="text-[#2d3f27]">
+                                    {review.name}
+                                  </strong>
+                                  <span aria-hidden="true">·</span>
+                                  <span
+                                    className={
+                                      review.approved
+                                        ? 'text-[#3a4f32] font-semibold'
+                                        : 'text-[#c2692a] font-semibold'
+                                    }
+                                  >
+                                    {review.approved
+                                      ? 'معتمد'
+                                      : 'بانتظار الموافقة'}
+                                  </span>
+                                </div>
+                                <p className="text-base text-[#3a4f32]">
+                                  {review.text}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 shrink-0">
+                              <label className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-[4px] border border-[#55734a]/40 bg-[#eef2ea] text-xs sm:text-sm font-bold text-[#2d3f27] hover:border-[#2d3f27] cursor-pointer">
+                                <Upload className="w-4 h-4 shrink-0" aria-hidden="true" />
+                                <span>
+                                  {isUpdatingPhoto
+                                    ? 'جاري الرفع...'
+                                    : resolvedReviewPhoto
+                                      ? 'تغيير الصورة'
+                                      : 'إضافة صورة'}
+                                </span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  disabled={isUpdatingPhoto}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      void handleChangeExistingReviewPhoto(
+                                        review.id,
+                                        file
+                                      );
+                                    }
+                                    e.target.value = '';
+                                  }}
+                                  className="sr-only"
+                                />
+                              </label>
+
+                              {resolvedReviewPhoto && (
+                                <button
+                                  type="button"
+                                  disabled={isUpdatingPhoto}
+                                  aria-label={`إزالة صورة ${review.name}`}
+                                  onClick={() =>
+                                    void handleClearExistingReviewPhoto(review.id)
+                                  }
+                                  className="inline-flex items-center gap-1 min-h-[44px] px-2.5 py-2 rounded-[4px] border border-[#55734a]/30 text-xs font-semibold text-[#55734a] hover:text-[#b8322a] hover:border-[#b8322a]/40 cursor-pointer"
+                                >
+                                  <X className="w-3.5 h-3.5" aria-hidden="true" />
+                                  <span>حذف الصورة</span>
+                                </button>
+                              )}
+
                               <button
                                 type="button"
-                                onClick={() => setPreviewModalUrl(review.photo)}
-                                aria-label={`معاينة صورة ${review.name}`}
-                                className="shrink-0 cursor-pointer rounded-[4px] overflow-hidden border border-[#55734a]/30 hover:border-[#2d3f27]"
+                                onClick={() =>
+                                  void setReviewApproved(
+                                    review.id,
+                                    !review.approved
+                                  )
+                                }
+                                className={`inline-flex items-center gap-1.5 min-h-[44px] px-3.5 py-2 rounded-[4px] text-sm font-bold border cursor-pointer ${
+                                  review.approved
+                                    ? 'border-[#55734a]/40 bg-[#faf9f5] text-[#2d3f27]'
+                                    : 'border-[#2d3f27] bg-[#2d3f27] text-[#faf9f5]'
+                                }`}
                               >
-                                <img
-                                  src={review.photo}
-                                  alt={`صورة ${review.name}`}
-                                  referrerPolicy="no-referrer"
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="w-16 h-16 object-cover block"
-                                />
-                              </button>
-                            )}
-                            <div className="space-y-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 text-sm">
-                                <strong className="text-[#2d3f27]">
-                                  {review.name}
-                                </strong>
-                                <span aria-hidden="true">·</span>
-                                <span
-                                  className={
-                                    review.approved
-                                      ? 'text-[#3a4f32] font-semibold'
-                                      : 'text-[#c2692a] font-semibold'
-                                  }
-                                >
-                                  {review.approved ? 'معتمد' : 'بانتظار الموافقة'}
+                                <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+                                <span>
+                                  {review.approved ? 'إلغاء الموافقة' : 'موافقة'}
                                 </span>
-                              </div>
-                              <p className="text-base text-[#3a4f32]">
-                                {review.text}
-                              </p>
+                              </button>
+
+                              <button
+                                type="button"
+                                aria-label={`حذف تقييم ${review.name}`}
+                                onClick={() => void deleteReview(review.id)}
+                                className="inline-flex items-center justify-center w-11 h-11 rounded-[4px] border border-[#b8322a]/35 text-[#b8322a] hover:bg-[#b8322a]/10 cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void setReviewApproved(review.id, !review.approved)
-                              }
-                              className={`inline-flex items-center gap-1.5 min-h-[44px] px-3.5 py-2 rounded-[4px] text-sm font-bold border cursor-pointer ${
-                                review.approved
-                                  ? 'border-[#55734a]/40 bg-[#faf9f5] text-[#2d3f27]'
-                                  : 'border-[#2d3f27] bg-[#2d3f27] text-[#faf9f5]'
-                              }`}
-                            >
-                              <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-                              <span>
-                                {review.approved ? 'إلغاء الموافقة' : 'موافقة'}
-                              </span>
-                            </button>
-
-                            <button
-                              type="button"
-                              aria-label={`حذف تقييم ${review.name}`}
-                              onClick={() => void deleteReview(review.id)}
-                              className="inline-flex items-center justify-center w-11 h-11 rounded-[4px] border border-[#b8322a]/35 text-[#b8322a] hover:bg-[#b8322a]/10 cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -1666,14 +1937,21 @@ const SiteAssetAdminCard: React.FC<SiteAssetAdminCardProps> = ({
       <div className="flex items-start gap-3.5">
         <button
           type="button"
-          onClick={() => onZoom(record.src)}
+          onClick={() => onZoom(resolveAssetUrl(record.src))}
           aria-label={`معاينة ${meta.label}`}
           className="w-20 h-20 shrink-0 rounded-[4px] overflow-hidden border border-[#6b4e31]/50 bg-[#eef2ea] cursor-pointer"
         >
           <img
-            src={record.src}
+            src={resolveAssetUrl(record.src)}
             alt={record.alt || meta.label}
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              const img = e.currentTarget;
+              const target = resolveAssetUrl(record.src);
+              if (img.dataset.fallbackFor === target) return;
+              img.dataset.fallbackFor = target;
+              img.src = resolveAssetUrl(meta.defaultSrc);
+            }}
             className="w-full h-full object-cover block"
           />
         </button>
