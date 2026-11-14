@@ -6,13 +6,16 @@ import {
   HERO_CONTENT,
   HERO_HILL_LAYERS,
   INTRO_CONTENT,
+  INTRO_ASSETS,
   INTRO_VIDEO_URL,
   CURRENT_WORKSHOP,
+  KINO_GIRL_ARCH_SRC,
   KINO_INSTAGRAM,
   formatSeatsLeft,
   getWorkshopTheme,
   getThemeCssVars,
   generatePetalSpecs,
+  normalizePublicAssetPath,
 } from './theme';
 import { parseVideoSource } from './video';
 import {
@@ -359,4 +362,20 @@ test('sanitizeGoogleMapsUrl allows http(s) URLs and rejects unsafe schemes', () 
   assert.equal(sanitizeGoogleMapsUrl('javascript:alert(1)'), '');
   assert.equal(sanitizeGoogleMapsUrl('not a url'), '');
   assert.equal(sanitizeGoogleMapsUrl(''), '');
+});
+
+test('normalizePublicAssetPath rewrites legacy /src/assets/images/ paths and defaults use /assets/images/', () => {
+  assert.equal(
+    normalizePublicAssetPath('/src/assets/images/kino_girl_arch_1794586132755.jpg'),
+    '/assets/images/kino_girl_arch_1794586132755.jpg'
+  );
+  assert.equal(
+    normalizePublicAssetPath('data:image/jpeg;base64,abc123'),
+    'data:image/jpeg;base64,abc123'
+  );
+  assert.ok(KINO_GIRL_ARCH_SRC.startsWith('/assets/images/'));
+  assert.ok(CURRENT_WORKSHOP.imageSrc.startsWith('/assets/images/'));
+  assert.ok(INTRO_ASSETS.lighthouseSrc.startsWith('/assets/images/'));
+  assert.ok(INTRO_ASSETS.japanCircleSrc.startsWith('/assets/images/'));
+  assert.ok(INTRO_ASSETS.videoPosterSrc.startsWith('/assets/images/'));
 });

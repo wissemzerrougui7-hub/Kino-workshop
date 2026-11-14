@@ -64,7 +64,7 @@ export const GALLERY_WALL_ITEMS: GalleryFrameItem[] = [
   },
   {
     id: 'gallery-atelier-prep',
-    src: '/src/assets/images/kinusaiga_video_poster_1794586751519.jpg',
+    src: '/assets/images/kinusaiga_video_poster_1794586751519.jpg',
     title: 'لقطة من طاولة التحضير: اختيار القماش قبل التثبيت في الشقوق',
     category: 'كواليس الورشة',
     aspectClass: 'aspect-[4/3]',
@@ -76,7 +76,7 @@ export const GALLERY_WALL_ITEMS: GalleryFrameItem[] = [
   },
   {
     id: 'gallery-autumn-leaves',
-    src: '/src/assets/images/autumn_kinusaiga_workshop_1794587096606.jpg',
+    src: '/assets/images/autumn_kinusaiga_workshop_1794587096606.jpg',
     title: 'لوحة أوراق الخريف بأقمشة قطنية دافية وإطار خشب طبيعي',
     category: 'لوحة كينوسايجا',
     aspectClass: 'aspect-square',

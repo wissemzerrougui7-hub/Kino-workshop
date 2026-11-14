@@ -1,6 +1,7 @@
 import type { ArtworkChoice } from './registration';
 import {
   WORKSHOP_THEMES,
+  normalizePublicAssetPath,
   type WorkshopConfig,
   type WorkshopSlot,
   type WorkshopThemeId,
@@ -165,8 +166,8 @@ export function sanitizeWorkshopPayload(
     description: input.description.trim().slice(0, 1000) || 'ورشة فنية مميزة.',
     seatsLeft: safeSeats,
     imageSrc:
-      input.imageSrc.trim().slice(0, 350000) ||
-      '/src/assets/images/autumn_kinusaiga_workshop_1794587096606.jpg',
+      normalizePublicAssetPath(input.imageSrc).slice(0, 350000) ||
+      '/assets/images/autumn_kinusaiga_workshop_1794587096606.jpg',
     imageAlt:
       (input.imageAlt || input.title).trim().slice(0, 300) ||
       'لوحة ورشة كينو',

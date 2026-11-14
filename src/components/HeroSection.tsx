@@ -346,6 +346,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 alt={heroGirlAlt}
                 referrerPolicy="no-referrer"
                 decoding="async"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (img.dataset.fallbackApplied === 'true') return;
+                  img.dataset.fallbackApplied = 'true';
+                  img.src = KINO_GIRL_ARCH_SRC;
+                }}
                 className="w-full h-auto block object-contain mix-blend-multiply select-none"
               />
 

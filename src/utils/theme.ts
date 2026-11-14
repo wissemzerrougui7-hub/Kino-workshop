@@ -123,7 +123,7 @@ export const CURRENT_WORKSHOP: WorkshopConfig = {
   description:
     'في هاد الورشة نخدمو مع بعض لوحة مستوحاة من ألوان الخريف الدافية، بأقمشة ناعمة وأجواء هادية بين صحباتك، وتخرجي بلوحتك مؤطّرة للدار.',
   seatsLeft: 12,
-  imageSrc: '/src/assets/images/autumn_kinusaiga_workshop_1794587096606.jpg',
+  imageSrc: '/assets/images/autumn_kinusaiga_workshop_1794587096606.jpg',
   imageAlt: 'لوحة ورشة الخريف بفن الكينوسايغا بأوراق القيقب البرتقالية والذهبية',
   locationName: 'عنابة — وسط المدينة',
   locationMapsUrl: 'https://maps.google.com/?q=Annaba,Algeria',
@@ -157,9 +157,9 @@ export const INTRO_VIDEO_URL =
   '/assets/aistudio/video6032864213905454358_61c01e10.mp4';
 
 export const INTRO_ASSETS = {
-  lighthouseSrc: '/src/assets/images/lighthouse_kinusaiga_1794586750826.jpg',
-  japanCircleSrc: '/src/assets/images/japan_craft_circle_1794586751846.jpg',
-  videoPosterSrc: '/src/assets/images/kinusaiga_video_poster_1794586751519.jpg',
+  lighthouseSrc: '/assets/images/lighthouse_kinusaiga_1794586750826.jpg',
+  japanCircleSrc: '/assets/images/japan_craft_circle_1794586751846.jpg',
+  videoPosterSrc: '/assets/images/kinusaiga_video_poster_1794586751519.jpg',
 } as const;
 
 export const INTRO_CONTENT = {
@@ -201,7 +201,15 @@ export interface HeroHillLayer {
   stitchD: string;
 }
 
-export const KINO_GIRL_ARCH_SRC = '/src/assets/images/kino_girl_arch_1794586132755.jpg';
+export const KINO_GIRL_ARCH_SRC = '/assets/images/kino_girl_arch_1794586132755.jpg';
+
+export function normalizePublicAssetPath(src: string): string {
+  const trimmed = src.trim();
+  if (trimmed.startsWith('/src/assets/images/')) {
+    return trimmed.replace('/src/assets/images/', '/assets/images/');
+  }
+  return trimmed;
+}
 
 export const HERO_CONTENT = {
   jpKicker: 'キノサイガ',

@@ -4,6 +4,7 @@ import {
   INTRO_ASSETS,
   KINO_GIRL_ARCH_SRC,
   KINO_LOGO_SRC,
+  normalizePublicAssetPath,
 } from './theme';
 
 export const SITE_ASSETS_COLLECTION = 'site_assets';
@@ -112,7 +113,8 @@ export function mergeSiteAssets(
     }
     if (!VALID_ASSET_KEYS.has(rawKey as SiteAssetKey)) continue;
     const key = rawKey as SiteAssetKey;
-    const src = typeof docData.src === 'string' ? docData.src.trim() : '';
+    const rawSrc = typeof docData.src === 'string' ? docData.src.trim() : '';
+    const src = normalizePublicAssetPath(rawSrc);
     if (!src) continue;
     const defaultEntry = assets[key];
     const alt =
@@ -149,7 +151,7 @@ export function sanitizeSiteAssetPayload(input: {
 } {
   const meta =
     SITE_ASSET_SLOTS.find((s) => s.key === input.key) ?? SITE_ASSET_SLOTS[0];
-  const src = input.src.trim().slice(0, 350000) || meta.defaultSrc;
+  const src = normalizePublicAssetPath(input.src).slice(0, 350000) || meta.defaultSrc;
   const label = (input.label ?? meta.label).trim().slice(0, 120) || meta.label;
   const alt = (input.alt ?? meta.defaultAlt).trim().slice(0, 300);
 
@@ -229,7 +231,7 @@ export function sanitizeGalleryItemPayload(
 
   return {
     id: sanitizeSlotId(input.id, `gallery-item-${orderIndex + 1}`),
-    src: input.src.trim().slice(0, 350000),
+    src: normalizePublicAssetPath(input.src).slice(0, 350000),
     title:
       input.title.trim().slice(0, 200) || 'لوحة كينوسايجا من الورشة',
     category,
