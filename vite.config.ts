@@ -5,6 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    base: '/Kino-workshops/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
