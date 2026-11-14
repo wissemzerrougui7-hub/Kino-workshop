@@ -1,0 +1,6 @@
+{
+  "name": "Kino — كينوسايغا الجزائر",
+  "description": "ورشات فن الكينوسايغا بالخشب والقماش للبنات في الجزائر — هيكل الموقع.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,386 @@
+{
+  "entities": {
+    "Workshop": {
+      "title": "Workshop",
+      "description": "Single active workshop configuration displayed on the public site and edited in /admin.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Workshop document identifier (e.g., workshops).",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "title": {
+          "type": "string",
+          "description": "Arabic/Darija title of the current workshop.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "themeName": {
+          "type": "string",
+          "description": "Display label for the active workshop theme.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "themeKey": {
+          "type": "string",
+          "description": "Theme accent key controlling site-wide accent color.",
+          "enum": ["forest", "autumn", "sakura", "sun"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Darija description of the upcoming workshop.",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "seatsLeft": {
+          "type": "number",
+          "description": "Remaining available seats count."
+        },
+        "imageSrc": {
+          "type": "string",
+          "description": "Artwork image path or URL for the workshop.",
+          "minLength": 1,
+          "maxLength": 350000
+        },
+        "imageAlt": {
+          "type": "string",
+          "description": "Accessible Arabic description of the workshop image.",
+          "maxLength": 300
+        },
+        "slots": {
+          "type": "array",
+          "description": "Exactly two scheduled workshop slots (weekday, dayNumber, month, time)."
+        },
+        "locationName": {
+          "type": "string",
+          "description": "Display address or venue name where the workshop is held.",
+          "maxLength": 160
+        },
+        "locationMapsUrl": {
+          "type": "string",
+          "description": "Google Maps URL pointing to the workshop venue.",
+          "maxLength": 500
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last admin update."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "themeName",
+        "themeKey",
+        "description",
+        "seatsLeft",
+        "imageSrc",
+        "imageAlt",
+        "slots"
+      ]
+    },
+    "Registration": {
+      "title": "Registration",
+      "description": "Public workshop registration submission stored privately for team admins.",
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "description": "Participant first name.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Participant last name.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "phone": {
+          "type": "string",
+          "description": "Participant phone number.",
+          "minLength": 8,
+          "maxLength": 24
+        },
+        "instagram": {
+          "type": "string",
+          "description": "Participant Instagram handle.",
+          "minLength": 2,
+          "maxLength": 60
+        },
+        "gmail": {
+          "type": "string",
+          "format": "email",
+          "description": "Participant email address.",
+          "minLength": 5,
+          "maxLength": 120
+        },
+        "workshopTitle": {
+          "type": "string",
+          "description": "Title of the workshop registered for.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "selectedSlotIds": {
+          "type": "array",
+          "description": "Chosen workshop slot IDs (1 or 2)."
+        },
+        "selectedSlotLabels": {
+          "type": "array",
+          "description": "Human-readable labels of the chosen slots."
+        },
+        "artworkChoice": {
+          "type": "string",
+          "description": "Selected painting mode.",
+          "enum": ["hand-draw", "upload-image", "surprise-me"]
+        },
+        "artworkNote": {
+          "type": "string",
+          "description": "Optional note or randomly picked surprise motif.",
+          "maxLength": 200
+        },
+        "uploadedImageUrl": {
+          "type": "string",
+          "description": "Uploaded reference image URL or compressed data URL.",
+          "maxLength": 350000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        }
+      },
+      "required": [
+        "firstName",
+        "lastName",
+        "phone",
+        "instagram",
+        "gmail",
+        "workshopTitle",
+        "selectedSlotIds",
+        "selectedSlotLabels",
+        "artworkChoice",
+        "uploadedImageUrl",
+        "createdAt"
+      ]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Workshop participant review moderated by team admins.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Reviewer name.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "text": {
+          "type": "string",
+          "description": "Review text.",
+          "minLength": 2,
+          "maxLength": 1000
+        },
+        "photo": {
+          "type": "string",
+          "description": "Optional photo URL of participant work.",
+          "maxLength": 350000
+        },
+        "approved": {
+          "type": "boolean",
+          "description": "Whether the review is approved by the team."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last moderation timestamp."
+        }
+      },
+      "required": ["name", "text", "photo", "approved"]
+    },
+    "SiteAsset": {
+      "title": "SiteAsset",
+      "description": "Editable public site image slot (logo, hero girl, intro frames, video poster) or gallery mode marker.",
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Fixed slot key such as logo, hero-girl, intro-lighthouse, intro-japan-circle, intro-video-poster, or gallery-seeded.",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable Arabic label of the asset slot.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "src": {
+          "type": "string",
+          "description": "Image path, URL, or compressed JPEG data URL.",
+          "minLength": 1,
+          "maxLength": 350000
+        },
+        "alt": {
+          "type": "string",
+          "description": "Accessible Arabic alt description.",
+          "maxLength": 300
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last update."
+        }
+      },
+      "required": ["key", "label", "src", "alt", "updatedAt"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "Framed artwork or workshop behind-the-scenes photo displayed on the Gallery Wall.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable gallery frame identifier.",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "src": {
+          "type": "string",
+          "description": "Image path, URL, or compressed JPEG data URL.",
+          "minLength": 1,
+          "maxLength": 350000
+        },
+        "title": {
+          "type": "string",
+          "description": "Arabic caption under the wooden frame.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "category": {
+          "type": "string",
+          "description": "Gallery frame category.",
+          "enum": ["لوحة كينوسايجا", "كواليس الورشة"]
+        },
+        "aspectClass": {
+          "type": "string",
+          "description": "Tailwind aspect ratio utility class.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "sizeSpanClass": {
+          "type": "string",
+          "description": "Tailwind grid column span classes.",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "offsetClass": {
+          "type": "string",
+          "description": "Optional vertical stagger offset class.",
+          "maxLength": 40
+        },
+        "rotationDeg": {
+          "type": "number",
+          "description": "Slight hanging tilt angle in degrees (-12 to 12)."
+        },
+        "stringDropPx": {
+          "type": "number",
+          "description": "Hanging string length in pixels (12 to 80)."
+        },
+        "frameColor": {
+          "type": "string",
+          "description": "Hex color of the wooden frame border.",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "orderIndex": {
+          "type": "number",
+          "description": "Sort order index on the gallery wall (0 to 500)."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation or last update."
+        }
+      },
+      "required": [
+        "id",
+        "src",
+        "title",
+        "category",
+        "aspectClass",
+        "sizeSpanClass",
+        "offsetClass",
+        "rotationDeg",
+        "stringDropPx",
+        "frameColor",
+        "orderIndex",
+        "updatedAt"
+      ]
+    },
+    "AdminMember": {
+      "title": "AdminMember",
+      "description": "Authorized team admin member granted access to /admin by an existing admin.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Lowercase verified Google/Gmail address of the team admin.",
+          "minLength": 5,
+          "maxLength": 120
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional display name or role note identifying the team member.",
+          "maxLength": 80
+        },
+        "addedBy": {
+          "type": "string",
+          "description": "Lowercase email of the admin who added this team member.",
+          "minLength": 5,
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the admin was added."
+        }
+      },
+      "required": ["email", "name", "addedBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/workshop/{workshopId}": {
+      "schema": { "$ref": "#/entities/Workshop" },
+      "description": "Stores the single active workshop document (workshop/current) readable publicly and editable only by admins."
+    },
+    "/registrations/{registrationId}": {
+      "schema": { "$ref": "#/entities/Registration" },
+      "description": "Publicly creatable registration entries readable, exportable, and editable only by listed team admins."
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Participant reviews: public can submit unapproved reviews (approved=false) and read approved reviews (approved=true); listed team admins can read, approve/unapprove, and delete all reviews."
+    },
+    "/site_assets/{assetKey}": {
+      "schema": { "$ref": "#/entities/SiteAsset" },
+      "description": "Publicly readable editable image slots for the landing page; writable only by listed team admins."
+    },
+    "/gallery_items/{itemId}": {
+      "schema": { "$ref": "#/entities/GalleryItem" },
+      "description": "Publicly readable framed gallery wall artworks and workshop photos; writable only by listed team admins."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminMember" },
+      "description": "Dynamic team admin emails (document ID is the lowercase email) managed from /admin alongside the bootstrapped primary owner."
+    }
+  }
+}

@@ -1,0 +1,314 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Primary owner admin email (bootstrapped, immutable)
+    function isOwnerAdmin() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() in [
+          'wissemzerrougui7@gmail.com'
+        ];
+    }
+
+    // Primary owner or dynamic co-admin added under /admins/{lowercaseEmail}
+    function isAdmin() {
+      return isOwnerAdmin() || (
+        isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))
+      );
+    }
+
+    function isValidSlotMap(slot) {
+      return slot is map
+        && slot.keys().hasAll(['id', 'weekday', 'dayNumber', 'month', 'time'])
+        && slot.keys().hasOnly(['id', 'weekday', 'dayNumber', 'month', 'time'])
+        && isValidId(slot.id)
+        && slot.weekday is string && slot.weekday.size() >= 1 && slot.weekday.size() <= 40
+        && slot.dayNumber is string && slot.dayNumber.size() >= 1 && slot.dayNumber.size() <= 10
+        && slot.month is string && slot.month.size() >= 1 && slot.month.size() <= 40
+        && slot.time is string && slot.time.size() >= 1 && slot.time.size() <= 40;
+    }
+
+    function isValidWorkshop(data) {
+      return data.keys().hasAll([
+          'id', 'title', 'themeName', 'themeKey', 'description',
+          'seatsLeft', 'imageSrc', 'imageAlt', 'slots'
+        ])
+        && data.keys().hasOnly([
+          'id', 'title', 'themeName', 'themeKey', 'description',
+          'seatsLeft', 'imageSrc', 'imageAlt', 'slots',
+          'locationName', 'locationMapsUrl', 'updatedAt'
+        ])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 64
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+        && data.themeName is string && data.themeName.size() >= 1 && data.themeName.size() <= 80
+        && data.themeKey in ['forest', 'autumn', 'sakura', 'sun']
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 1000
+        && data.seatsLeft is int && data.seatsLeft >= 0 && data.seatsLeft <= 200
+        && data.imageSrc is string && data.imageSrc.size() >= 1 && data.imageSrc.size() <= 350000
+        && data.imageAlt is string && data.imageAlt.size() <= 300
+        && data.slots is list && data.slots.size() == 2
+        && isValidSlotMap(data.slots[0])
+        && isValidSlotMap(data.slots[1])
+        && (!('locationName' in data) || (data.locationName is string && data.locationName.size() <= 160))
+        && (!('locationMapsUrl' in data) || (data.locationMapsUrl is string && data.locationMapsUrl.size() <= 500))
+        && (!('updatedAt' in data) || data.updatedAt == request.time);
+    }
+
+    function isValidRegistration(data) {
+      return data.keys().hasAll([
+          'firstName', 'lastName', 'phone', 'instagram', 'gmail',
+          'workshopTitle', 'selectedSlotIds', 'selectedSlotLabels',
+          'artworkChoice', 'uploadedImageUrl', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'firstName', 'lastName', 'phone', 'instagram', 'gmail',
+          'workshopTitle', 'selectedSlotIds', 'selectedSlotLabels',
+          'artworkChoice', 'artworkNote', 'uploadedImageUrl', 'createdAt'
+        ])
+        && data.firstName is string && data.firstName.size() >= 2 && data.firstName.size() <= 80
+        && data.lastName is string && data.lastName.size() >= 2 && data.lastName.size() <= 80
+        && data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 24
+        && data.instagram is string && data.instagram.size() >= 2 && data.instagram.size() <= 60
+        && data.gmail is string && data.gmail.size() >= 5 && data.gmail.size() <= 120
+        && data.workshopTitle is string && data.workshopTitle.size() >= 1 && data.workshopTitle.size() <= 120
+        && data.selectedSlotIds is list
+        && data.selectedSlotIds.size() >= 1 && data.selectedSlotIds.size() <= 2
+        && data.selectedSlotIds[0] is string && data.selectedSlotIds[0].size() <= 64
+        && (data.selectedSlotIds.size() == 1 || (data.selectedSlotIds[1] is string && data.selectedSlotIds[1].size() <= 64))
+        && data.selectedSlotLabels is list
+        && data.selectedSlotLabels.size() >= 1 && data.selectedSlotLabels.size() <= 2
+        && data.selectedSlotLabels[0] is string && data.selectedSlotLabels[0].size() <= 120
+        && (data.selectedSlotLabels.size() == 1 || (data.selectedSlotLabels[1] is string && data.selectedSlotLabels[1].size() <= 120))
+        && data.artworkChoice in ['hand-draw', 'upload-image', 'surprise-me']
+        && (!('artworkNote' in data) || (data.artworkNote is string && data.artworkNote.size() <= 200))
+        && data.uploadedImageUrl is string && data.uploadedImageUrl.size() <= 350000
+        && (data.artworkChoice != 'upload-image' || data.uploadedImageUrl.size() > 0)
+        && data.createdAt == request.time;
+    }
+
+    function isValidReview(data) {
+      return data.keys().hasAll(['name', 'text', 'photo', 'approved', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'text', 'photo', 'approved', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 80
+        && data.text is string && data.text.size() >= 2 && data.text.size() <= 1000
+        && data.photo is string && data.photo.size() <= 350000
+        && data.approved is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Workshop config: public can read so the landing page displays live workshop config; only admins can write.
+    match /workshop/{workshopId} {
+      allow get: if isValidId(workshopId);
+      allow list: if true;
+      allow create: if isAdmin() && isValidId(workshopId) && isValidWorkshop(incoming());
+      allow update: if isAdmin()
+        && isValidId(workshopId)
+        && isValidWorkshop(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'themeName', 'themeKey', 'description',
+          'seatsLeft', 'imageSrc', 'imageAlt', 'slots',
+          'locationName', 'locationMapsUrl', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(workshopId);
+    }
+
+    // Registrations: public can create validated entries, NEVER read; only listed admins can read, update, or delete.
+    match /registrations/{registrationId} {
+      allow get: if isAdmin() && isValidId(registrationId);
+      allow list: if isAdmin();
+      allow create: if isValidId(registrationId) && isValidRegistration(incoming());
+      allow update: if isAdmin()
+        && isValidId(registrationId)
+        && isValidRegistrationUpdate(incoming(), existing());
+      allow delete: if isAdmin() && isValidId(registrationId);
+    }
+
+    function isValidRegistrationUpdate(next, prev) {
+      return next.createdAt == prev.createdAt
+        && next.firstName is string && next.firstName.size() >= 2 && next.firstName.size() <= 80
+        && next.lastName is string && next.lastName.size() >= 2 && next.lastName.size() <= 80
+        && next.phone is string && next.phone.size() >= 8 && next.phone.size() <= 24
+        && next.instagram is string && next.instagram.size() >= 2 && next.instagram.size() <= 60
+        && next.gmail is string && next.gmail.size() >= 5 && next.gmail.size() <= 120
+        && next.workshopTitle is string && next.workshopTitle.size() >= 1 && next.workshopTitle.size() <= 120
+        && next.selectedSlotIds is list && next.selectedSlotIds.size() >= 1 && next.selectedSlotIds.size() <= 2
+        && next.selectedSlotLabels is list && next.selectedSlotLabels.size() >= 1 && next.selectedSlotLabels.size() <= 2
+        && next.artworkChoice in ['hand-draw', 'upload-image', 'surprise-me']
+        && (!('artworkNote' in next) || (next.artworkNote is string && next.artworkNote.size() <= 200))
+        && next.uploadedImageUrl is string && next.uploadedImageUrl.size() <= 350000
+        && next.diff(prev).affectedKeys().hasOnly([
+          'firstName', 'lastName', 'phone', 'instagram', 'gmail',
+          'workshopTitle', 'selectedSlotIds', 'selectedSlotLabels',
+          'artworkChoice', 'artworkNote', 'uploadedImageUrl'
+        ]);
+    }
+
+    // Reviews: public can read ONLY approved reviews and create unapproved reviews (approved == false);
+    // only listed admins can read unapproved reviews, approve/edit, or delete.
+    match /reviews/{reviewId} {
+      allow get: if isAdmin() || (isValidId(reviewId) && existing().approved == true);
+      allow list: if isAdmin() || resource.data.approved == true;
+      allow create: if isValidId(reviewId)
+        && isValidReview(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (isAdmin() || incoming().approved == false);
+      allow update: if isAdmin()
+        && isValidId(reviewId)
+        && isValidReview(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'text', 'photo', 'approved', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(reviewId);
+    }
+
+    function isValidSiteAsset(data) {
+      return data.keys().hasAll(['key', 'label', 'src', 'alt', 'updatedAt'])
+        && data.keys().hasOnly(['key', 'label', 'src', 'alt', 'updatedAt'])
+        && isValidId(data.key)
+        && data.key.size() <= 64
+        && data.label is string && data.label.size() >= 1 && data.label.size() <= 120
+        && data.src is string && data.src.size() >= 1 && data.src.size() <= 350000
+        && data.alt is string && data.alt.size() <= 300
+        && data.updatedAt == request.time;
+    }
+
+    function isValidGalleryItem(data) {
+      return data.keys().hasAll([
+          'id', 'src', 'title', 'category', 'aspectClass',
+          'sizeSpanClass', 'offsetClass', 'rotationDeg', 'stringDropPx',
+          'frameColor', 'orderIndex', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'src', 'title', 'category', 'aspectClass',
+          'sizeSpanClass', 'offsetClass', 'rotationDeg', 'stringDropPx',
+          'frameColor', 'orderIndex', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id.size() <= 64
+        && data.src is string && data.src.size() >= 1 && data.src.size() <= 350000
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.category in ['لوحة كينوسايجا', 'كواليس الورشة']
+        && data.aspectClass is string && data.aspectClass.size() >= 1 && data.aspectClass.size() <= 40
+        && data.sizeSpanClass is string && data.sizeSpanClass.size() >= 1 && data.sizeSpanClass.size() <= 60
+        && data.offsetClass is string && data.offsetClass.size() <= 40
+        && data.rotationDeg is number && data.rotationDeg >= -12 && data.rotationDeg <= 12
+        && data.stringDropPx is number && data.stringDropPx >= 12 && data.stringDropPx <= 80
+        && data.frameColor is string && data.frameColor.size() >= 1 && data.frameColor.size() <= 20
+        && data.orderIndex is number && data.orderIndex >= 0 && data.orderIndex <= 500
+        && data.updatedAt == request.time;
+    }
+
+    // Site image slots: public read for landing page; only listed team admins can create, update, or reset/delete.
+    match /site_assets/{assetKey} {
+      allow get: if isValidId(assetKey);
+      allow list: if true;
+      allow create: if isAdmin()
+        && isValidId(assetKey)
+        && isValidSiteAsset(incoming())
+        && incoming().key == assetKey;
+      allow update: if isAdmin()
+        && isValidId(assetKey)
+        && isValidSiteAsset(incoming())
+        && incoming().key == existing().key
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'label', 'src', 'alt', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(assetKey);
+    }
+
+    // Gallery wall items: public read for framed artworks; only listed team admins can create, edit, or delete.
+    match /gallery_items/{itemId} {
+      allow get: if isValidId(itemId);
+      allow list: if true;
+      allow create: if isAdmin()
+        && isValidId(itemId)
+        && isValidGalleryItem(incoming())
+        && incoming().id == itemId;
+      allow update: if isAdmin()
+        && isValidId(itemId)
+        && isValidGalleryItem(incoming())
+        && incoming().id == existing().id
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'src', 'title', 'category', 'aspectClass', 'sizeSpanClass',
+          'offsetClass', 'rotationDeg', 'stringDropPx', 'frameColor',
+          'orderIndex', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(itemId);
+    }
+
+    function isValidAdminEmailId(id) {
+      return id is string
+        && id.size() >= 5
+        && id.size() <= 120
+        && id == id.lower()
+        && id.matches('^[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}$');
+    }
+
+    function isValidAdminMember(data) {
+      return data.keys().hasAll(['email', 'name', 'addedBy', 'createdAt'])
+        && data.keys().hasOnly(['email', 'name', 'addedBy', 'createdAt'])
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 120
+        && data.email == data.email.lower()
+        && data.name is string && data.name.size() <= 80
+        && data.addedBy is string && data.addedBy.size() >= 5 && data.addedBy.size() <= 120
+        && data.createdAt is timestamp;
+    }
+
+    // Dynamic team admins: verified users may check their own email doc; active admins can list, add, or remove co-admins (owner cannot be deleted).
+    match /admins/{adminId} {
+      allow get: if isAdmin() || (
+        isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == adminId
+      );
+      allow list: if isAdmin();
+      allow create: if isAdmin()
+        && isValidAdminEmailId(adminId)
+        && isValidAdminMember(incoming())
+        && incoming().email == adminId
+        && incoming().addedBy == request.auth.token.email.lower()
+        && incoming().createdAt == request.time
+        && !(adminId in ['wissemzerrougui7@gmail.com']);
+      allow update: if isAdmin()
+        && isValidAdminEmailId(adminId)
+        && isValidAdminMember(incoming())
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name']);
+      allow delete: if isAdmin()
+        && isValidAdminEmailId(adminId)
+        && !(adminId in ['wissemzerrougui7@gmail.com']);
+    }
+  }
+}
